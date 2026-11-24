@@ -385,11 +385,12 @@
     let rawUT = [];
     let rawEQ = [];
     let treeData = [];
-    let registrosCampo = {}; // { idEquipo: { estado, fecha, inspector, observaciones, fotos: [] } }
-    let creacionesNuevas = {}; // { idTemp: { id, estacion, ut, tag, denominacion, observaciones, fecha, inspector, fotos: [] } }
+    let registrosCampo = {};
+    let creacionesNuevas = {};
     let nodoSeleccionado = null;
+    let fotosTemporalesCreacion = [];
+    let obsTimer = null;
 
-    // Indicador de red
     function actualizarEstadoRed() {
       const pill = document.getElementById("netStatus");
       if (navigator.onLine) {
@@ -404,7 +405,6 @@
     window.addEventListener("offline", actualizarEstadoRed);
     actualizarEstadoRed();
 
-    // Inspector
     const inspectorInput = document.getElementById("inspectorName");
     if (localStorage.getItem("sap_inspector")) inspectorInput.value = localStorage.getItem("sap_inspector");
     inspectorInput.addEventListener("change", () => localStorage.setItem("sap_inspector", inspectorInput.value.trim() || "Rodrigo"));
@@ -459,64 +459,60 @@
     // ==========================================
     // 2. EXTRACCIÓN DE ESTACIÓN Y CARGA DE DATOS
     // ==========================================
-// Diccionario editable de códigos de emplazamiento -> Nombre de estación
-// Completa aquí los nombres exactos según tus códigos de SAP
-const NOMBRES_EMPLAZAMIENTO = {
-  // "P0090": "Estación Chimitá",
-  // "P0230": "Estación Galán",
-  // "P0310": "Estación Lizama",
-  // "P0520": "Estación Santa Rosa",
-  // "P0540": "Estación Sebastopol",
-  // "P0630": "Estación Vasconia"
-};
+    const NOMBRES_EMPLAZAMIENTO = {
+      "P0090": "Estación Chimitá",
+      "P0230": "Estación Galán",
+      "P0310": "Estación Lizama",
+      "P0520": "Estación Santa Rosa",
+      "P0540": "Estación Sebastopol",
+      "P0630": "Estación Vasconia"
+    };
 
-function obtenerNombreEstacion(codigo, item = null) {
-  const codLimpio = String(codigo || "").trim();
-  if (!codLimpio) return "General / Sin Estación";
+    function obtenerNombreEstacion(codigo, item = null) {
+      const codLimpio = String(codigo || "").trim();
+      if (!codLimpio) return "General / Sin Estación";
 
-  // 1. Si está en el diccionario manual, usar ese nombre
-  if (NOMBRES_EMPLAZAMIENTO[codLimpio]) {
-    return `${codLimpio} - ${NOMBRES_EMPLAZAMIENTO[codLimpio]}`;
-  }
+      if (NOMBRES_EMPLAZAMIENTO[codLimpio]) {
+        return `${codLimpio} - ${NOMBRES_EMPLAZAMIENTO[codLimpio]}`;
+      }
 
-  // 2. Intentar deducir por prefijos conocidos en UT o denominación
-  const textoRef = `${item?.["Ubicación técnica"] || ""} ${item?.["Denominación de la ubicación técnica"] || ""} ${item?.["Denominación de objeto técnico"] || ""}`.toUpperCase();
-  const prefijos = [
-    { key: "PVAS", label: "Estación Vasconia" },
-    { key: "PBUC", label: "Estación Chimitá" },
-    { key: "PGAL", label: "Estación Galán" },
-    { key: "PSEB", label: "Estación Sebastopol" },
-    { key: "PSRO", label: "Estación Santa Rosa" },
-    { key: "PCHI", label: "Estación Chimita" }
-  ];
+      const textoRef = `${item?.["Ubicación técnica"] || ""} ${item?.["Denominación de la ubicación técnica"] || ""} ${item?.["Denominación de objeto técnico"] || ""}`.toUpperCase();
+      const prefijos = [
+        { key: "PVAS", label: "Estación Vasconia" },
+        { key: "PBUC", label: "Estación Chimitá" },
+        { key: "PGAL", label: "Estación Galán" },
+        { key: "PSEB", label: "Estación Sebastopol" },
+        { key: "PSRO", label: "Estación Santa Rosa" },
+        { key: "PCHI", label: "Estación Chimita" },
+        { key: "PLIZ", label: "Estación Lizama" }
+      ];
 
-  for (const p of prefijos) {
-    if (textoRef.includes(p.key)) {
-      return `${codLimpio} - ${p.label}`;
+      for (const p of prefijos) {
+        if (textoRef.includes(p.key)) {
+          return `${codLimpio} - ${p.label}`;
+        }
+      }
+
+      return codLimpio;
     }
-  }
 
-  // 3. Si aún no tiene nombre asignado, mostrar el código claramente
-  return codLimpio;
-}
+    function detectarEstacion(item) {
+      let codigo = "";
+      if (item["Emplazamiento"] && String(item["Emplazamiento"]).trim() !== "") {
+        codigo = String(item["Emplazamiento"]).trim();
+      } else if (item["Estación"] && String(item["Estación"]).trim() !== "") {
+        codigo = String(item["Estación"]).trim();
+      } else if (item["Estacion"] && String(item["Estacion"]).trim() !== "") {
+        codigo = String(item["Estacion"]).trim();
+      } else {
+        const ut = String(item["Ubicación técnica"] || "").toUpperCase();
+        const partes = ut.split("-");
+        if (partes.length >= 2 && partes[1].length >= 3) codigo = partes[1];
+        else codigo = "SIN_EMPLAZAMIENTO";
+      }
 
-function detectarEstacion(item) {
-  let codigo = "";
-  if (item["Emplazamiento"] && String(item["Emplazamiento"]).trim() !== "") {
-    codigo = String(item["Emplazamiento"]).trim();
-  } else if (item["Estación"] && String(item["Estación"]).trim() !== "") {
-    codigo = String(item["Estación"]).trim();
-  } else if (item["Estacion"] && String(item["Estacion"]).trim() !== "") {
-    codigo = String(item["Estacion"]).trim();
-  } else {
-    const ut = String(item["Ubicación técnica"] || "").toUpperCase();
-    const partes = ut.split("-");
-    if (partes.length >= 2 && partes[1].length >= 3) codigo = partes[1];
-    else codigo = "SIN_EMPLAZAMIENTO";
-  }
-
-  return obtenerNombreEstacion(codigo, item);
-}
+      return obtenerNombreEstacion(codigo, item);
+    }
 
     async function cargarDatos(forzarRed = false) {
       const container = document.getElementById("tree-container");
@@ -563,7 +559,6 @@ function detectarEstacion(item) {
     }
 
     function inicializarVista() {
-      // Asignar estación normalizada a cada registro
       rawUT.forEach(u => u._estacionNorm = detectarEstacion(u));
       rawEQ.forEach(e => e._estacionNorm = detectarEstacion(e));
 
@@ -780,7 +775,6 @@ function detectarEstacion(item) {
         ${nodo.tipo === "UT" ? `<button class="ut-info-btn" title="Ver ficha de Ubicación Técnica">Ficha</button>` : ""}
       `;
 
-      // Clic en la flecha: solo expande/contrae sin abrir ficha
       const toggleSpan = row.querySelector(".toggle");
       toggleSpan.onclick = (e) => {
         e.stopPropagation();
@@ -791,7 +785,6 @@ function detectarEstacion(item) {
         }
       };
 
-      // Botón opcional "Ficha" en UTs
       if (nodo.tipo === "UT") {
         const infoBtn = row.querySelector(".ut-info-btn");
         infoBtn.onclick = (e) => {
@@ -800,9 +793,6 @@ function detectarEstacion(item) {
         };
       }
 
-      // Clic principal en la fila:
-      // - Si es UT: solo despliega/contrae rápido para navegar sin interrupciones
-      // - Si es Equipo o Sub-equipo: abre la interfaz de levantamiento y fotos
       row.onclick = (e) => {
         e.stopPropagation();
         if (nodo.tipo === "UT") {
@@ -913,7 +903,7 @@ function detectarEstacion(item) {
           <div class="photo-grid">${fotosHTML}</div>
 
           <label class="form-label">Observaciones / Datos de placa (se exporta directo en el Excel):</label>
-          <textarea class="obs-input" placeholder="Escribe aquí observaciones técnicas, serie, marca, modelo o novedades..." oninput="guardarObservacion(this.value)">${reg.observaciones || ""}</textarea>
+          <textarea class="obs-input" placeholder="Escribe aquí observaciones técnicas, serie, marca, modelo o novedades..." oninput="guardarObservacionDebounced(this.value)" onblur="guardarObservacion(this.value)">${reg.observaciones || ""}</textarea>
         </div>
 
         <div class="grid-specs">${specsHTML}</div>
@@ -946,10 +936,16 @@ function detectarEstacion(item) {
       mostrarDetalle(nodoSeleccionado);
     }
 
+    function guardarObservacionDebounced(texto) {
+      clearTimeout(obsTimer);
+      obsTimer = setTimeout(() => guardarObservacion(texto), 300);
+    }
+
     async function guardarObservacion(texto) {
       if (!nodoSeleccionado) return;
       const id = nodoSeleccionado.id;
       const actual = registrosCampo[id] || { id, estado: "PENDIENTE", fotos: [] };
+      if (actual.observaciones === texto) return;
       actual.observaciones = texto;
       registrosCampo[id] = actual;
       await guardarEnStore("levantamiento", actual);
@@ -1046,6 +1042,8 @@ function detectarEstacion(item) {
 
     function abrirPanelCreaciones(idEditar = null) {
       nodoSeleccionado = null;
+      if (!idEditar) fotosTemporalesCreacion = [];
+
       const detailContainer = document.getElementById("detail-container");
       const content = document.getElementById("detail-content");
       detailContainer.classList.add("mobile-open");
@@ -1058,12 +1056,12 @@ function detectarEstacion(item) {
       ).join("");
 
       const item = idEditar ? creacionesNuevas[idEditar] : null;
-      const fotos = item?.fotos || [];
+      const fotos = item ? (item.fotos || []) : fotosTemporalesCreacion;
 
       const fotosHTML = fotos.map((src, idx) => `
         <div class="photo-thumb">
           <img src="${src}" onclick="verFotoGrande('${src}')" />
-          ${idEditar ? `<button class="photo-del" onclick="eliminarFotoCreacion('${idEditar}', ${idx})">✕</button>` : ""}
+          <button class="photo-del" onclick="${idEditar ? `eliminarFotoCreacion('${idEditar}', ${idx})` : `eliminarFotoTempCreacion(${idx})`}" title="Borrar foto">✕</button>
         </div>
       `).join("");
 
@@ -1127,7 +1125,10 @@ function detectarEstacion(item) {
       `;
     }
 
-    let fotosTemporalesCreacion = [];
+    function eliminarFotoTempCreacion(index) {
+      fotosTemporalesCreacion.splice(index, 1);
+      abrirPanelCreaciones(null);
+    }
 
     async function procesarFotoCreacion(event, idEditar) {
       const files = Array.from(event.target.files);
@@ -1149,7 +1150,12 @@ function detectarEstacion(item) {
       } else {
         fotosTemporalesCreacion = listaFotos;
         const grid = document.getElementById("cr_photo_grid");
-        grid.innerHTML = listaFotos.map(src => `<div class="photo-thumb"><img src="${src}" /></div>`).join("");
+        grid.innerHTML = listaFotos.map((src, idx) => `
+          <div class="photo-thumb">
+            <img src="${src}" onclick="verFotoGrande('${src}')" />
+            <button class="photo-del" onclick="eliminarFotoTempCreacion(${idx})" title="Borrar foto">✕</button>
+          </div>
+        `).join("");
       }
     }
 
@@ -1234,7 +1240,6 @@ function detectarEstacion(item) {
 
       const filasExcel = [];
 
-      // 1. Equipos existentes en SAP
       equiposExportar.forEach(eq => {
         const id = eq["Equipo"];
         const denom = eq["Denominación de objeto técnico"] || "Sin_Denominacion";
@@ -1259,7 +1264,6 @@ function detectarEstacion(item) {
           "Observaciones": reg.observaciones || ""
         });
 
-        // Solo guardar carpeta si tiene fotos (observaciones van directo al Excel)
         if (numFotos > 0) {
           const nombreCarpetaUT = limpiarNombreCarpeta(ut);
           const nombreCarpetaEQ = limpiarNombreCarpeta(`${id} - ${denom}`).substring(0, 80);
@@ -1272,7 +1276,6 @@ function detectarEstacion(item) {
         }
       });
 
-      // 2. Equipos nuevos (Creaciones)
       const listaCreaciones = Object.values(creacionesNuevas).filter(cr => estSeleccionada === "TODAS" || cr.estacion === estSeleccionada);
       const filasCreaciones = [];
 
@@ -1306,7 +1309,6 @@ function detectarEstacion(item) {
         });
       }
 
-      // Generar libro Excel con ambas pestañas
       const wb = XLSX.utils.book_new();
       const ws = XLSX.utils.json_to_sheet(filasExcel);
       XLSX.utils.book_append_sheet(wb, ws, "Levantamiento_SAP");
@@ -1328,7 +1330,6 @@ function detectarEstacion(item) {
       link.click();
     }
 
-    // Eventos filtros
     let searchTimer;
     document.getElementById("searchInput").addEventListener("input", () => {
       clearTimeout(searchTimer);
