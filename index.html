@@ -459,29 +459,64 @@
     // ==========================================
     // 2. EXTRACCIÓN DE ESTACIÓN Y CARGA DE DATOS
     // ==========================================
-    function detectarEstacion(item) {
-      if (item["Estación"] && String(item["Estación"]).trim() !== "") return String(item["Estación"]).trim();
-      if (item["Estacion"] && String(item["Estacion"]).trim() !== "") return String(item["Estacion"]).trim();
-      if (item["Emplazamiento"] && String(item["Emplazamiento"]).trim() !== "") return String(item["Emplazamiento"]).trim();
+// Diccionario editable de códigos de emplazamiento -> Nombre de estación
+// Completa aquí los nombres exactos según tus códigos de SAP
+const NOMBRES_EMPLAZAMIENTO = {
+  // "P0090": "Nombre Estación P0090",
+  // "P0230": "Nombre Estación P0230",
+  // "P0310": "Nombre Estación P0310",
+  // "P0520": "Nombre Estación P0520",
+  // "P0540": "Nombre Estación P0540",
+  // "P0630": "Nombre Estación P0630"
+};
 
-      const ut = String(item["Ubicación técnica"] || "").toUpperCase();
-      const mapaPrefijos = {
-        "PGAL": "Estación Galán",
-        "PSEB": "Estación Sebastopol",
-        "PVAS": "Estación Vasconia",
-        "PSRO": "Estación Santa Rosa",
-        "PCHI": "Estación Chimita",
-        "PBAR": "Barrancabermeja",
-        "PBUC": "Bucaramanga"
-      };
-      for (const [pref, nombre] of Object.entries(mapaPrefijos)) {
-        if (ut.includes(pref)) return nombre;
-      }
-      // Si la UT tiene formato TR0-XXXX-..., extraer segundo segmento
-      const partes = ut.split("-");
-      if (partes.length >= 2 && partes[1].length >= 3) return partes[1];
-      return "General / Sin Estación";
+function obtenerNombreEstacion(codigo, item = null) {
+  const codLimpio = String(codigo || "").trim();
+  if (!codLimpio) return "General / Sin Estación";
+
+  // 1. Si está en el diccionario manual, usar ese nombre
+  if (NOMBRES_EMPLAZAMIENTO[codLimpio]) {
+    return `${codLimpio} - ${NOMBRES_EMPLAZAMIENTO[codLimpio]}`;
+  }
+
+  // 2. Intentar deducir por prefijos conocidos en UT o denominación
+  const textoRef = `${item?.["Ubicación técnica"] || ""} ${item?.["Denominación de la ubicación técnica"] || ""} ${item?.["Denominación de objeto técnico"] || ""}`.toUpperCase();
+  const prefijos = [
+    { key: "PVAS", label: "Estación Vasconia" },
+    { key: "PBUC", label: "Estación Chimitá" },
+    { key: "PGAL", label: "Estación Galán" },
+    { key: "PSEB", label: "Estación Sebastopol" },
+    { key: "PSRO", label: "Estación Santa Rosa" },
+    { key: "PCHI", label: "Estación Chimita" }
+  ];
+
+  for (const p of prefijos) {
+    if (textoRef.includes(p.key)) {
+      return `${codLimpio} - ${p.label}`;
     }
+  }
+
+  // 3. Si aún no tiene nombre asignado, mostrar el código claramente
+  return codLimpio;
+}
+
+function detectarEstacion(item) {
+  let codigo = "";
+  if (item["Emplazamiento"] && String(item["Emplazamiento"]).trim() !== "") {
+    codigo = String(item["Emplazamiento"]).trim();
+  } else if (item["Estación"] && String(item["Estación"]).trim() !== "") {
+    codigo = String(item["Estación"]).trim();
+  } else if (item["Estacion"] && String(item["Estacion"]).trim() !== "") {
+    codigo = String(item["Estacion"]).trim();
+  } else {
+    const ut = String(item["Ubicación técnica"] || "").toUpperCase();
+    const partes = ut.split("-");
+    if (partes.length >= 2 && partes[1].length >= 3) codigo = partes[1];
+    else codigo = "SIN_EMPLAZAMIENTO";
+  }
+
+  return obtenerNombreEstacion(codigo, item);
+}
 
     async function cargarDatos(forzarRed = false) {
       const container = document.getElementById("tree-container");
