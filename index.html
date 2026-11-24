@@ -5,20 +5,19 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Levantamiento de Activos SAP</title>
   <link rel="manifest" href="manifest.json" />
-  <meta name="theme-color" content="#0f172a" />
+  <meta name="theme-color" content="#050914" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
-<style>
+  <style>
     :root {
       --bg: #050914;
-      --panel: rgba(11, 20, 38, 0.88);
-      --panel-hover: rgba(18, 36, 66, 0.95);
-      --border: rgba(56, 189, 248, 0.28);
+      --panel: rgba(11, 20, 38, 0.9);
+      --panel-hover: rgba(18, 36, 66, 0.96);
+      --border: rgba(0, 229, 255, 0.28);
       --text: #e6f1ff;
       --muted: #7f9bb8;
       --accent: #00e5ff;
-      --accent-2: #7c3aed;
       --ut-color: #ffb800;
       --eq-color: #00f5a0;
       --subeq-color: #c084fc;
@@ -48,7 +47,7 @@
 
     /* Barra superior HUD */
     header {
-      background: linear-gradient(180deg, rgba(10, 19, 36, 0.96), rgba(7, 13, 25, 0.92));
+      background: linear-gradient(180deg, rgba(10, 19, 36, 0.97), rgba(7, 13, 25, 0.93));
       backdrop-filter: blur(10px);
       border-bottom: 1px solid var(--border);
       box-shadow: 0 4px 24px rgba(0, 0, 0, 0.55);
@@ -96,7 +95,7 @@
     }
 
     .station-select {
-      background: rgba(5, 11, 22, 0.9);
+      background: rgba(5, 11, 22, 0.92);
       border: 1px solid var(--ut-color);
       color: #ffd15c;
       font-weight: 700;
@@ -154,7 +153,7 @@
     }
 
     select, button, input[type="text"].inspector-input {
-      background: rgba(7, 15, 30, 0.9);
+      background: rgba(7, 15, 30, 0.92);
       border: 1px solid var(--border);
       color: var(--text);
       padding: 6px 9px;
@@ -170,6 +169,36 @@
       background: var(--panel-hover);
       border-color: rgba(0, 229, 255, 0.55);
     }
+
+    /* Cortes y marcos HUD */
+    .hud-btn-cut {
+      clip-path: polygon(
+        8px 0%,
+        100% 0%,
+        100% calc(100% - 8px),
+        calc(100% - 8px) 100%,
+        0% 100%,
+        0% 8px
+      );
+    }
+
+    .hud-frame {
+      position: relative;
+      background: linear-gradient(145deg, rgba(12, 24, 46, 0.95), rgba(6, 12, 24, 0.97));
+      border: 1px solid rgba(0, 229, 255, 0.42);
+      clip-path: polygon(
+        14px 0%,
+        calc(100% - 14px) 0%,
+        100% 14px,
+        100% calc(100% - 14px),
+        calc(100% - 14px) 100%,
+        14px 100%,
+        0% calc(100% - 14px),
+        0% 14px
+      );
+      box-shadow: inset 0 0 18px rgba(0, 229, 255, 0.12);
+    }
+
     button.primary {
       background: linear-gradient(135deg, #00e5ff, #0284c7);
       color: #03101d;
@@ -305,7 +334,7 @@
       border: 1px solid var(--border);
       box-shadow: var(--glow);
       border-radius: 10px;
-      padding: 13px;
+      padding: 15px;
       margin-bottom: 16px;
     }
     .field-capture-box h3 {
@@ -419,13 +448,220 @@
       background: var(--panel);
       border: 1px solid rgba(255, 42, 133, 0.45);
       border-radius: 8px;
-      padding: 12px;
+      padding: 14px;
       margin-bottom: 10px;
       cursor: pointer;
     }
     .creation-card:hover { background: var(--panel-hover); }
 
     .loader { padding: 20px; color: var(--accent); font-size: 0.9rem; }
+
+    /* ==========================================
+       MODO CLARO / ALTO CONTRASTE PARA SOL (CAMPO)
+       ========================================== */
+    body.light-field {
+      --bg: #eef2f6;
+      --panel: #ffffff;
+      --panel-hover: #e2e8f0;
+      --border: #94a3b8;
+      --text: #0f172a;
+      --muted: #334155;
+      --accent: #0369a1;
+      --ut-color: #b45309;
+      --eq-color: #047857;
+      --subeq-color: #6d28d9;
+      --create-color: #be185d;
+      --ok-bg: rgba(5, 150, 105, 0.14);
+      --err-bg: rgba(220, 38, 38, 0.14);
+      --glow: 0 2px 10px rgba(15, 23, 42, 0.08);
+      background-color: var(--bg);
+      background-image: none;
+      color: var(--text);
+    }
+
+    body.light-field header {
+      background: #ffffff;
+      backdrop-filter: none;
+      border-bottom: 1.5px solid #94a3b8;
+      box-shadow: 0 2px 10px rgba(15, 23, 42, 0.08);
+    }
+
+    body.light-field header h1 {
+      color: #0369a1;
+      text-shadow: none;
+    }
+
+    body.light-field .station-select {
+      background: #fffbeb;
+      border: 1.5px solid #b45309;
+      color: #78350f;
+      box-shadow: none;
+    }
+
+    body.light-field .status-pill {
+      background: #dcfce7;
+      color: #166534;
+      border-color: #86efac;
+      box-shadow: none;
+    }
+    body.light-field .status-pill.offline {
+      background: #fef3c7;
+      color: #92400e;
+      border-color: #fcd34d;
+    }
+
+    body.light-field .progress-bar {
+      background: #e2e8f0;
+      border-color: #94a3b8;
+    }
+    body.light-field .progress-fill {
+      background: linear-gradient(90deg, #0284c7, #059669);
+      box-shadow: none;
+    }
+
+    body.light-field .search-box,
+    body.light-field select,
+    body.light-field button,
+    body.light-field input[type="text"].inspector-input,
+    body.light-field textarea.obs-input,
+    body.light-field input.form-input {
+      background: #ffffff;
+      border-color: #94a3b8;
+      color: #0f172a;
+    }
+
+    body.light-field .search-box:focus,
+    body.light-field textarea.obs-input:focus,
+    body.light-field input.form-input:focus {
+      border-color: #0284c7;
+      box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.2);
+    }
+
+    body.light-field button:hover,
+    body.light-field select:hover {
+      background: #e2e8f0;
+      border-color: #475569;
+    }
+
+    body.light-field button.primary {
+      background: #0284c7;
+      color: #ffffff;
+      border: none;
+      box-shadow: none;
+    }
+
+    body.light-field button.export-btn {
+      background: #059669;
+      color: #ffffff;
+      border: none;
+      box-shadow: none;
+    }
+
+    body.light-field button.create-btn {
+      background: #fce7f3;
+      border: 1px solid #db2777;
+      color: #9d174d;
+    }
+
+    body.light-field #tree-container {
+      background: #f8fafc;
+      border-right-color: #cbd5e1;
+    }
+
+    body.light-field #detail-container {
+      background: #eef2f6;
+    }
+
+    body.light-field .node {
+      border-left-color: #94a3b8;
+    }
+
+    body.light-field .node-row:hover {
+      background: #e2e8f0;
+    }
+
+    body.light-field .node-row.selected {
+      background: #e0f2fe;
+      border-color: #0284c7;
+      box-shadow: none;
+    }
+
+    body.light-field .code {
+      color: #0f172a;
+    }
+
+    body.light-field .desc {
+      color: #334155;
+    }
+
+    body.light-field .badge-ut {
+      background: #fef3c7;
+      color: #92400e;
+      border-color: #f59e0b;
+    }
+
+    body.light-field .badge-eq {
+      background: #d1fae5;
+      color: #065f46;
+      border-color: #10b981;
+    }
+
+    body.light-field .badge-sub {
+      background: #ede9fe;
+      color: #5b21b6;
+      border-color: #8b5cf6;
+    }
+
+    body.light-field .badge-new {
+      background: #fce7f3;
+      color: #9d174d;
+      border-color: #ec4899;
+    }
+
+    body.light-field .field-capture-box,
+    body.light-field .spec-card,
+    body.light-field .creation-card {
+      background: #ffffff;
+      border-color: #94a3b8;
+      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+    }
+
+    body.light-field .btn-check {
+      background: #f8fafc;
+      border-color: #94a3b8;
+      color: #0f172a;
+    }
+
+    body.light-field .btn-check.active-ok {
+      background: #059669;
+      color: #ffffff;
+      border-color: #059669;
+      box-shadow: none;
+    }
+
+    body.light-field .btn-check.active-err {
+      background: #dc2626;
+      color: #ffffff;
+      border-color: #dc2626;
+      box-shadow: none;
+    }
+
+    body.light-field .photo-btn {
+      background: #f0f9ff;
+      border-color: #0284c7;
+      color: #0369a1;
+    }
+
+    body.light-field .hud-frame {
+      background: #ffffff;
+      border: 1.5px solid #0284c7;
+      clip-path: none;
+      box-shadow: 0 2px 10px rgba(15, 23, 42, 0.08);
+    }
+
+    body.light-field .hud-btn-cut {
+      clip-path: none;
+    }
 
     @media (max-width: 820px) {
       #tree-container { width: 100%; border-right: none; }
@@ -462,10 +698,11 @@
         <span id="netStatus" class="status-pill">En línea</span>
       </div>
       <div style="display:flex; gap:5px; align-items:center; flex-wrap:wrap;">
+        <button type="button" id="btnModoCampo" onclick="alternarModoCampo()" title="Cambiar a modo claro para sol / campo">☀️ Modo Campo</button>
         <input type="text" id="inspectorName" class="inspector-input" value="Rodrigo" placeholder="Inspector" />
         <button class="create-btn" onclick="abrirPanelCreaciones()" id="btnCreaciones">➕ Creaciones (0)</button>
-        <button class="primary" onclick="cargarDatos(true)" title="Descargar datos nuevos de Sheets">↻ Sync</button>
-        <button class="export-btn" onclick="exportarJornadaZIP()">📦 Exportar ZIP</button>
+        <button class="primary hud-btn-cut" onclick="cargarDatos(true)" title="Descargar datos nuevos de Sheets">↻ Sync</button>
+        <button class="export-btn hud-btn-cut" onclick="exportarJornadaZIP()">📦 Exportar ZIP</button>
       </div>
     </div>
 
@@ -531,6 +768,23 @@
     let nodoSeleccionado = null;
     let fotosTemporalesCreacion = [];
     let obsTimer = null;
+
+    function aplicarModoCampo(activo) {
+      const btn = document.getElementById("btnModoCampo");
+      document.body.classList.toggle("light-field", activo);
+      localStorage.setItem("sap_modo_campo_claro", activo ? "1" : "0");
+      if (btn) {
+        btn.textContent = activo ? "🌙 Modo HUD" : "☀️ Modo Campo";
+        btn.title = activo ? "Volver al modo oscuro HUD" : "Cambiar a modo claro para sol / campo";
+      }
+    }
+
+    function alternarModoCampo() {
+      const activoActual = document.body.classList.contains("light-field");
+      aplicarModoCampo(!activoActual);
+    }
+
+    aplicarModoCampo(localStorage.getItem("sap_modo_campo_claro") === "1");
 
     function toggleFiltrosMovil() {
       const bar = document.getElementById("controlsBar");
@@ -1085,12 +1339,12 @@
           </div>
         </div>
 
-        <div class="field-capture-box">
+        <div class="field-capture-box hud-frame">
           <h3><span>Registro en Campo</span> <span>Fotos: ${(reg.fotos || []).length} / ${MAX_FOTOS}</span></h3>
           
           <div class="action-buttons">
-            <button class="btn-check ${esLevantado ? "active-ok" : ""}" onclick="cambiarEstado('LEVANTADO')">✅ Levantado</button>
-            <button class="btn-check ${esNoEncontrado ? "active-err" : ""}" onclick="cambiarEstado('NO_ENCONTRADO')">❌ No encontrado</button>
+            <button class="btn-check hud-btn-cut ${esLevantado ? "active-ok" : ""}" onclick="cambiarEstado('LEVANTADO')">✅ Levantado</button>
+            <button class="btn-check hud-btn-cut ${esNoEncontrado ? "active-err" : ""}" onclick="cambiarEstado('NO_ENCONTRADO')">❌ No encontrado</button>
           </div>
 
           ${metaHTML}
@@ -1275,7 +1529,7 @@
       `).join("");
 
       const listaExistentesHTML = Object.values(creacionesNuevas).map(cr => `
-        <div class="creation-card" onclick="abrirPanelCreaciones('${cr.id}')">
+        <div class="creation-card hud-frame" onclick="abrirPanelCreaciones('${cr.id}')">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
             <span class="badge badge-new">CREACIÓN NUEVA</span>
             <span style="font-size:0.75rem; color:var(--muted);">${cr.estacion} · 📷 ${(cr.fotos || []).length}</span>
@@ -1292,7 +1546,7 @@
           <p style="font-size:0.8rem; color:var(--muted);">Registra equipos encontrados en planta que deben crearse en SAP.</p>
         </div>
 
-        <div class="field-capture-box">
+        <div class="field-capture-box hud-frame">
           <label class="form-label">Ubicación Técnica Padre (Donde está instalado):</label>
           <input list="listaUTCreacion" id="cr_ut" class="form-input" value="${item?.ut || ""}" placeholder="Escribe o selecciona la UT..." />
           <datalist id="listaUTCreacion">${opcionesUT}</datalist>
@@ -1324,8 +1578,8 @@
           <div class="photo-grid" id="cr_photo_grid">${fotosHTML}</div>
 
           <div style="display:flex; gap:8px; margin-top:10px;">
-            <button class="export-btn" style="flex:1; padding:11px;" onclick="guardarCreacion('${idEditar || ""}')">💾 Guardar Equipo Nuevo</button>
-            ${idEditar ? `<button style="background:#ef4444; color:white; border:none; padding:11px;" onclick="borrarCreacion('${idEditar}')">🗑️ Eliminar</button>` : ""}
+            <button class="export-btn hud-btn-cut" style="flex:1; padding:11px;" onclick="guardarCreacion('${idEditar || ""}')">💾 Guardar Equipo Nuevo</button>
+            ${idEditar ? `<button class="hud-btn-cut" style="background:#ef4444; color:white; border:none; padding:11px;" onclick="borrarCreacion('${idEditar}')">🗑️ Eliminar</button>` : ""}
           </div>
         </div>
 
