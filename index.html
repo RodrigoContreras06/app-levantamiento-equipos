@@ -6,7 +6,6 @@
   <title>Levantamiento de Activos SAP</title>
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#0f172a" />
-  <!-- Librerías para generar ZIP y Excel Offline -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
@@ -22,10 +21,9 @@
       --ut-color: #f59e0b;
       --eq-color: #10b981;
       --subeq-color: #a855f7;
+      --create-color: #ec4899;
       --ok-bg: rgba(16, 185, 129, 0.16);
-      --ok-border: #10b981;
       --err-bg: rgba(239, 68, 68, 0.16);
-      --err-border: #ef4444;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
@@ -35,7 +33,7 @@
     header {
       background: var(--panel);
       border-bottom: 1px solid var(--border);
-      padding: 10px 16px;
+      padding: 10px 14px;
       display: flex;
       flex-direction: column;
       gap: 8px;
@@ -49,12 +47,12 @@
       gap: 8px;
     }
 
-    .title-group { display: flex; align-items: center; gap: 10px; }
-    header h1 { font-size: 1.05rem; font-weight: 700; color: var(--accent); }
+    .title-group { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    header h1 { font-size: 1.02rem; font-weight: 700; color: var(--accent); }
     
     .status-pill {
-      font-size: 0.72rem;
-      padding: 3px 8px;
+      font-size: 0.7rem;
+      padding: 2px 8px;
       border-radius: 12px;
       background: rgba(16, 185, 129, 0.15);
       color: #34d399;
@@ -62,28 +60,39 @@
     }
     .status-pill.offline { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border-color: rgba(245, 158, 11, 0.3); }
 
+    /* Selector destacado de Estación */
+    .station-select {
+      background: #0f172a;
+      border: 1.5px solid var(--ut-color);
+      color: #fbbf24;
+      font-weight: 700;
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-size: 0.85rem;
+    }
+
     /* Barra de progreso */
-    .progress-wrapper { display: flex; align-items: center; gap: 10px; font-size: 0.8rem; color: var(--muted); }
+    .progress-wrapper { display: flex; align-items: center; gap: 10px; font-size: 0.78rem; color: var(--muted); }
     .progress-bar { flex: 1; height: 8px; background: var(--bg); border-radius: 4px; overflow: hidden; border: 1px solid var(--border); }
     .progress-fill { height: 100%; background: var(--eq-color); width: 0%; transition: width 0.3s ease; }
 
     /* Controles y filtros */
     .controls-bar {
       display: flex;
-      gap: 8px;
+      gap: 6px;
       flex-wrap: wrap;
       align-items: center;
     }
 
     .search-box {
       flex: 1;
-      min-width: 200px;
+      min-width: 180px;
       background: var(--bg);
       border: 1px solid var(--border);
       color: var(--text);
       padding: 7px 10px;
       border-radius: 6px;
-      font-size: 0.85rem;
+      font-size: 0.84rem;
     }
     .search-box:focus { outline: none; border-color: var(--accent); }
 
@@ -93,13 +102,15 @@
       color: var(--text);
       padding: 7px 10px;
       border-radius: 6px;
-      font-size: 0.82rem;
+      font-size: 0.8rem;
       cursor: pointer;
     }
-    input[type="text"].inspector-input { width: 120px; cursor: text; }
+    input[type="text"].inspector-input { width: 105px; cursor: text; }
     button:hover { background: var(--panel-hover); }
     button.primary { background: var(--accent); color: #0f172a; font-weight: 600; border: none; }
     button.export-btn { background: #10b981; color: #0f172a; font-weight: 700; border: none; }
+    button.create-btn { background: rgba(236, 72, 153, 0.18); border: 1px solid var(--create-color); color: #f472b6; font-weight: 700; }
+    button.create-btn:hover { background: rgba(236, 72, 153, 0.3); }
 
     /* Contenedor principal */
     main { display: flex; flex: 1; overflow: hidden; position: relative; }
@@ -119,12 +130,12 @@
       display: flex;
       align-items: center;
       gap: 6px;
-      padding: 7px 8px;
+      padding: 8px 8px;
       border-radius: 6px;
       cursor: pointer;
-      font-size: 0.86rem;
+      font-size: 0.85rem;
       user-select: none;
-      margin-bottom: 2px;
+      margin-bottom: 3px;
       border: 1px solid transparent;
     }
     .node-row:hover { background: var(--panel-hover); }
@@ -132,15 +143,36 @@
     .node-row.status-levantado { background: var(--ok-bg); border-color: rgba(16, 185, 129, 0.35); }
     .node-row.status-no-encontrado { background: var(--err-bg); border-color: rgba(239, 68, 68, 0.35); }
 
-    .toggle { width: 16px; text-align: center; color: var(--muted); font-size: 0.75rem; flex-shrink: 0; }
+    .toggle {
+      width: 22px;
+      height: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--accent);
+      font-size: 0.8rem;
+      flex-shrink: 0;
+      border-radius: 4px;
+    }
+    .toggle:hover { background: rgba(255,255,255,0.1); }
     .status-dot { width: 16px; text-align: center; font-weight: bold; font-size: 0.85rem; flex-shrink: 0; }
-    .badge { font-size: 0.68rem; padding: 2px 5px; border-radius: 4px; font-weight: 600; text-transform: uppercase; flex-shrink: 0; }
+    .badge { font-size: 0.66rem; padding: 2px 5px; border-radius: 4px; font-weight: 600; text-transform: uppercase; flex-shrink: 0; }
     .badge-ut { background: rgba(245, 158, 11, 0.15); color: var(--ut-color); }
     .badge-eq { background: rgba(16, 185, 129, 0.15); color: var(--eq-color); }
     .badge-sub { background: rgba(168, 85, 247, 0.15); color: var(--subeq-color); }
+    .badge-new { background: rgba(236, 72, 153, 0.2); color: #f472b6; }
 
     .code { font-family: monospace; font-weight: 600; color: #e2e8f0; flex-shrink: 0; }
-    .desc { color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .desc { color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; }
+    .ut-info-btn {
+      padding: 2px 6px;
+      font-size: 0.72rem;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      border-radius: 4px;
+      flex-shrink: 0;
+    }
     .children { display: none; }
     .children.open { display: block; }
 
@@ -158,13 +190,14 @@
       background: var(--panel);
       border: 1px solid var(--accent);
       color: var(--accent);
-      padding: 8px 14px;
+      padding: 10px 14px;
       font-weight: 600;
       width: 100%;
       text-align: left;
+      border-radius: 8px;
     }
 
-    .empty-state { color: var(--muted); text-align: center; margin-top: 25%; font-size: 0.92rem; }
+    .empty-state { color: var(--muted); text-align: center; margin-top: 20%; font-size: 0.92rem; padding: 0 20px; line-height: 1.5; }
     .detail-header { border-bottom: 1px solid var(--border); padding-bottom: 12px; margin-bottom: 16px; }
     .detail-title { font-size: 1.15rem; margin: 6px 0 4px; }
     .detail-code { font-family: monospace; color: var(--accent); font-size: 0.95rem; display: flex; align-items: center; gap: 8px; }
@@ -210,7 +243,7 @@
       font-weight: 600;
       cursor: pointer;
     }
-    .photo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 8px; margin-bottom: 12px; }
+    .photo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(85px, 1fr)); gap: 8px; margin-bottom: 12px; }
     .photo-thumb {
       position: relative;
       aspect-ratio: 1;
@@ -236,7 +269,7 @@
       justify-content: center;
     }
 
-    textarea.obs-input {
+    textarea.obs-input, input.form-input {
       width: 100%;
       background: var(--bg);
       border: 1px solid var(--border);
@@ -244,16 +277,29 @@
       padding: 10px;
       border-radius: 6px;
       font-size: 0.88rem;
-      min-height: 75px;
-      resize: vertical;
+      margin-bottom: 10px;
     }
-    textarea.obs-input:focus { outline: none; border-color: var(--accent); }
+    textarea.obs-input { min-height: 80px; resize: vertical; }
+    textarea.obs-input:focus, input.form-input:focus { outline: none; border-color: var(--accent); }
+
+    .form-label { display: block; font-size: 0.78rem; color: var(--muted); margin-bottom: 4px; font-weight: 600; }
 
     /* Ficha técnica SAP */
     .grid-specs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
     .spec-card { background: var(--panel); border: 1px solid var(--border); padding: 8px 10px; border-radius: 6px; }
     .spec-label { font-size: 0.7rem; color: var(--muted); margin-bottom: 2px; }
     .spec-value { font-size: 0.84rem; font-weight: 500; word-break: break-word; }
+
+    /* Lista de Creaciones */
+    .creation-card {
+      background: var(--panel);
+      border: 1px solid rgba(236, 72, 153, 0.4);
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 10px;
+      cursor: pointer;
+    }
+    .creation-card:hover { background: var(--panel-hover); }
 
     .loader { padding: 20px; color: var(--accent); font-size: 0.92rem; }
 
@@ -280,17 +326,21 @@
     <div class="header-top">
       <div class="title-group">
         <h1>⚙️ Levantamiento SAP</h1>
+        <select id="filterEstacion" class="station-select" title="Selecciona la Estación de trabajo">
+          <option value="">📍 Seleccionar Estación...</option>
+        </select>
         <span id="netStatus" class="status-pill">En línea</span>
       </div>
-      <div style="display:flex; gap:6px; align-items:center;">
-        <input type="text" id="inspectorName" class="inspector-input" value="Rodrigo" placeholder="Inspector" title="Nombre del inspector" />
+      <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+        <input type="text" id="inspectorName" class="inspector-input" value="Rodrigo" placeholder="Inspector" />
+        <button class="create-btn" onclick="abrirPanelCreaciones()" id="btnCreaciones">➕ Creaciones (0)</button>
         <button class="primary" onclick="cargarDatos(true)" title="Descargar datos nuevos de Sheets">↻ Sync</button>
         <button class="export-btn" onclick="exportarJornadaZIP()">📦 Exportar ZIP</button>
       </div>
     </div>
 
     <div class="progress-wrapper">
-      <span id="progressText">0 / 0 levantados (0 no encontrados)</span>
+      <span id="progressText">Selecciona una estación para ver el avance</span>
       <div class="progress-bar"><div id="progressFill" class="progress-fill"></div></div>
     </div>
 
@@ -314,31 +364,32 @@
       <div class="loader">Iniciando base de datos local...</div>
     </div>
     <div id="detail-container">
-      <button class="mobile-back-btn" onclick="cerrarDetalleMovil()">← Volver al listado de equipos</button>
+      <button class="mobile-back-btn" onclick="cerrarDetalleMovil()">← Volver al árbol de equipos</button>
       <div id="detail-content">
-        <div class="empty-state">Selecciona una Ubicación Técnica o Equipo en el árbol para iniciar el levantamiento.</div>
+        <div class="empty-state">Selecciona una Estación arriba y navega por el árbol para tocar el equipo que vas a levantar.</div>
       </div>
     </div>
   </main>
 
   <script>
-    // Registrar Service Worker para modo Offline (PWA)
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker.register("./sw.js").catch(err => console.warn("SW no registrado:", err));
     }
 
     const API_URL = "https://script.google.com/macros/s/AKfycbx_V7vCNrVFpOGeD3waVKZ7RIJkAer2Z-KLj2bxbmv5g8AgjxZeDqqqihu5NT4F_0th/exec";
-    const DB_NAME = "SAPLevantamientoDB";
+    const DB_NAME = "SAPLevantamientoDB_v2";
     const DB_VERSION = 1;
+    const MAX_FOTOS = 10;
 
     let db;
     let rawUT = [];
     let rawEQ = [];
     let treeData = [];
-    let registrosCampo = {}; // { idEquipo: { estado, fecha, inspector, observaciones, fotos: [dataUrl...] } }
+    let registrosCampo = {}; // { idEquipo: { estado, fecha, inspector, observaciones, fotos: [] } }
+    let creacionesNuevas = {}; // { idTemp: { id, estacion, ut, tag, denominacion, observaciones, fecha, inspector, fotos: [] } }
     let nodoSeleccionado = null;
 
-    // Indicador de conexión
+    // Indicador de red
     function actualizarEstadoRed() {
       const pill = document.getElementById("netStatus");
       if (navigator.onLine) {
@@ -353,34 +404,24 @@
     window.addEventListener("offline", actualizarEstadoRed);
     actualizarEstadoRed();
 
-    // Guardar nombre inspector
+    // Inspector
     const inspectorInput = document.getElementById("inspectorName");
-    if (localStorage.getItem("sap_inspector")) {
-      inspectorInput.value = localStorage.getItem("sap_inspector");
-    }
-    inspectorInput.addEventListener("change", () => {
-      localStorage.setItem("sap_inspector", inspectorInput.value.trim() || "Rodrigo");
-    });
+    if (localStorage.getItem("sap_inspector")) inspectorInput.value = localStorage.getItem("sap_inspector");
+    inspectorInput.addEventListener("change", () => localStorage.setItem("sap_inspector", inspectorInput.value.trim() || "Rodrigo"));
 
     // ==========================================
-    // 1. GESTIÓN DE INDEXEDDB (ALMACENAMIENTO SEGURO)
+    // 1. INDEXEDDB
     // ==========================================
     function initDB() {
       return new Promise((resolve, reject) => {
         const request = indexedDB.open(DB_NAME, DB_VERSION);
         request.onupgradeneeded = (e) => {
           const database = e.target.result;
-          if (!database.objectStoreNames.contains("catalogo")) {
-            database.createObjectStore("catalogo");
-          }
-          if (!database.objectStoreNames.contains("levantamiento")) {
-            database.createObjectStore("levantamiento", { keyPath: "id" });
-          }
+          if (!database.objectStoreNames.contains("catalogo")) database.createObjectStore("catalogo");
+          if (!database.objectStoreNames.contains("levantamiento")) database.createObjectStore("levantamiento", { keyPath: "id" });
+          if (!database.objectStoreNames.contains("creaciones")) database.createObjectStore("creaciones", { keyPath: "id" });
         };
-        request.onsuccess = (e) => {
-          db = e.target.result;
-          resolve(db);
-        };
+        request.onsuccess = (e) => { db = e.target.result; resolve(db); };
         request.onerror = (e) => reject(e.target.error);
       });
     }
@@ -390,6 +431,16 @@
         const tx = db.transaction(storeName, "readwrite");
         const store = tx.objectStore(storeName);
         const req = key ? store.put(data, key) : store.put(data);
+        req.onsuccess = () => resolve();
+        req.onerror = (e) => reject(e.target.error);
+      });
+    }
+
+    function eliminarDeStore(storeName, key) {
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(storeName, "readwrite");
+        const store = tx.objectStore(storeName);
+        const req = store.delete(key);
         req.onsuccess = () => resolve();
         req.onerror = (e) => reject(e.target.error);
       });
@@ -406,18 +457,45 @@
     }
 
     // ==========================================
-    // 2. CARGA DE CATÁLOGO Y AVANCES
+    // 2. EXTRACCIÓN DE ESTACIÓN Y CARGA DE DATOS
     // ==========================================
+    function detectarEstacion(item) {
+      if (item["Estación"] && String(item["Estación"]).trim() !== "") return String(item["Estación"]).trim();
+      if (item["Estacion"] && String(item["Estacion"]).trim() !== "") return String(item["Estacion"]).trim();
+      if (item["Emplazamiento"] && String(item["Emplazamiento"]).trim() !== "") return String(item["Emplazamiento"]).trim();
+
+      const ut = String(item["Ubicación técnica"] || "").toUpperCase();
+      const mapaPrefijos = {
+        "PGAL": "Estación Galán",
+        "PSEB": "Estación Sebastopol",
+        "PVAS": "Estación Vasconia",
+        "PSRO": "Estación Santa Rosa",
+        "PCHI": "Estación Chimita",
+        "PBAR": "Barrancabermeja",
+        "PBUC": "Bucaramanga"
+      };
+      for (const [pref, nombre] of Object.entries(mapaPrefijos)) {
+        if (ut.includes(pref)) return nombre;
+      }
+      // Si la UT tiene formato TR0-XXXX-..., extraer segundo segmento
+      const partes = ut.split("-");
+      if (partes.length >= 2 && partes[1].length >= 3) return partes[1];
+      return "General / Sin Estación";
+    }
+
     async function cargarDatos(forzarRed = false) {
       const container = document.getElementById("tree-container");
       if (!db) await initDB();
 
-      // Cargar avances guardados en campo
       const listaAvances = await leerDeStore("levantamiento");
       registrosCampo = {};
       (listaAvances || []).forEach(reg => { registrosCampo[reg.id] = reg; });
 
-      // Intentar cargar catálogo desde IndexedDB si no se fuerza red
+      const listaCreaciones = await leerDeStore("creaciones");
+      creacionesNuevas = {};
+      (listaCreaciones || []).forEach(cr => { creacionesNuevas[cr.id] = cr; });
+      actualizarBotonCreaciones();
+
       if (!forzarRed) {
         const cachedCatalog = await leerDeStore("catalogo", "sap_data");
         if (cachedCatalog && (cachedCatalog.ubicaciones?.length || cachedCatalog.equipos?.length)) {
@@ -450,34 +528,74 @@
     }
 
     function inicializarVista() {
-      poblarFiltros();
-      treeData = construirArbol(rawUT, rawEQ);
-      actualizarProgreso();
+      // Asignar estación normalizada a cada registro
+      rawUT.forEach(u => u._estacionNorm = detectarEstacion(u));
+      rawEQ.forEach(e => e._estacionNorm = detectarEstacion(e));
+
+      poblarEstaciones();
+      aplicarCambioEstacion();
+    }
+
+    function poblarEstaciones() {
+      const estaciones = new Set();
+      [...rawUT, ...rawEQ].forEach(item => {
+        if (item._estacionNorm) estaciones.add(item._estacionNorm);
+      });
+
+      const selEstacion = document.getElementById("filterEstacion");
+      const guardada = localStorage.getItem("sap_estacion_activa") || "";
+      const lista = [...estaciones].sort();
+
+      selEstacion.innerHTML = '<option value="TODAS">🌐 Todas las Estaciones</option>';
+      lista.forEach(est => {
+        selEstacion.innerHTML += `<option value="${est}">📍 ${est}</option>`;
+      });
+
+      if (guardada && (guardada === "TODAS" || lista.includes(guardada))) {
+        selEstacion.value = guardada;
+      } else if (lista.length > 0) {
+        selEstacion.value = lista[0];
+      }
+    }
+
+    function aplicarCambioEstacion() {
+      const estSeleccionada = document.getElementById("filterEstacion").value;
+      localStorage.setItem("sap_estacion_activa", estSeleccionada);
+
+      const utFiltradas = estSeleccionada === "TODAS" ? rawUT : rawUT.filter(u => u._estacionNorm === estSeleccionada);
+      const eqFiltrados = estSeleccionada === "TODAS" ? rawEQ : rawEQ.filter(e => e._estacionNorm === estSeleccionada);
+
+      poblarFiltrosSecundarios(utFiltradas, eqFiltrados);
+      treeData = construirArbol(utFiltradas, eqFiltrados);
+      actualizarProgreso(eqFiltrados);
+      actualizarBotonCreaciones();
       renderizarArbol();
     }
 
-    function actualizarProgreso() {
-      const totalEquipos = rawEQ.length;
+    function actualizarProgreso(eqList = null) {
+      const estSeleccionada = document.getElementById("filterEstacion").value;
+      const equiposActivos = eqList || (estSeleccionada === "TODAS" ? rawEQ : rawEQ.filter(e => e._estacionNorm === estSeleccionada));
+
+      const totalEquipos = equiposActivos.length;
       let levantados = 0;
       let noEncontrados = 0;
 
-      rawEQ.forEach(eq => {
-        const id = eq["Equipo"];
-        const reg = registrosCampo[id];
+      equiposActivos.forEach(eq => {
+        const reg = registrosCampo[eq["Equipo"]];
         if (reg?.estado === "LEVANTADO") levantados++;
         if (reg?.estado === "NO_ENCONTRADO") noEncontrados++;
       });
 
       const pct = totalEquipos > 0 ? Math.round(((levantados + noEncontrados) / totalEquipos) * 100) : 0;
-      document.getElementById("progressText").textContent = `${levantados} / ${totalEquipos} levantados (${noEncontrados} no encontrados) · ${pct}%`;
+      document.getElementById("progressText").textContent = `${estSeleccionada === "TODAS" ? "Total" : estSeleccionada}: ${levantados} / ${totalEquipos} levantados (${noEncontrados} no enc.) · ${pct}%`;
       document.getElementById("progressFill").style.width = `${pct}%`;
     }
 
-    function poblarFiltros() {
+    function poblarFiltrosSecundarios(utList, eqList) {
       const troncales = new Set();
       const criticidades = new Set();
 
-      [...rawUT, ...rawEQ].forEach(item => {
+      [...utList, ...eqList].forEach(item => {
         if (item["Troncal"]) troncales.add(item["Troncal"]);
         if (item["Criticidad"]) criticidades.add(item["Criticidad"]);
       });
@@ -542,7 +660,7 @@
     }
 
     // ==========================================
-    // 3. RENDERIZADO Y FILTROS DEL ÁRBOL
+    // 3. RENDERIZADO Y NAVEGACIÓN FLUIDA DEL ÁRBOL
     // ==========================================
     function renderizarArbol() {
       const query = document.getElementById("searchInput").value.toLowerCase().trim();
@@ -557,7 +675,7 @@
       container.innerHTML = "";
 
       if (arbolFiltrado.length === 0) {
-        container.innerHTML = '<div class="empty-state">No se encontraron activos con esos filtros.</div>';
+        container.innerHTML = '<div class="empty-state">No se encontraron activos en esta estación con esos filtros.</div>';
         return;
       }
 
@@ -619,24 +737,49 @@
       row.className = `node-row ${rowStatusClass} ${nodoSeleccionado?.id === nodo.id ? "selected" : ""}`;
       row.dataset.id = nodo.id;
       row.innerHTML = `
-        <span class="toggle">${tieneHijos ? (abrirHijos ? "▼" : "▶") : "•"}</span>
+        <span class="toggle" title="Expandir/Contraer">${tieneHijos ? (abrirHijos ? "▼" : "▶") : "•"}</span>
         ${statusIcon ? `<span class="status-dot">${statusIcon}</span>` : ""}
         <span class="badge ${badgeClass}">${badgeText}</span>
         <span class="code">${nodo.id}</span>
         <span class="desc" title="${nodo.nombre}">${nodo.nombre}</span>
+        ${nodo.tipo === "UT" ? `<button class="ut-info-btn" title="Ver ficha de Ubicación Técnica">Ficha</button>` : ""}
       `;
 
-      row.onclick = (e) => {
+      // Clic en la flecha: solo expande/contrae sin abrir ficha
+      const toggleSpan = row.querySelector(".toggle");
+      toggleSpan.onclick = (e) => {
         e.stopPropagation();
-        document.querySelectorAll(".node-row.selected").forEach(el => el.classList.remove("selected"));
-        row.classList.add("selected");
-        mostrarDetalle(nodo);
-
         if (tieneHijos) {
           const childrenDiv = div.querySelector(".children");
-          const toggleSpan = row.querySelector(".toggle");
           const isOpen = childrenDiv.classList.toggle("open");
           toggleSpan.textContent = isOpen ? "▼" : "▶";
+        }
+      };
+
+      // Botón opcional "Ficha" en UTs
+      if (nodo.tipo === "UT") {
+        const infoBtn = row.querySelector(".ut-info-btn");
+        infoBtn.onclick = (e) => {
+          e.stopPropagation();
+          seleccionarYAbrirNodo(row, nodo);
+        };
+      }
+
+      // Clic principal en la fila:
+      // - Si es UT: solo despliega/contrae rápido para navegar sin interrupciones
+      // - Si es Equipo o Sub-equipo: abre la interfaz de levantamiento y fotos
+      row.onclick = (e) => {
+        e.stopPropagation();
+        if (nodo.tipo === "UT") {
+          if (tieneHijos) {
+            const childrenDiv = div.querySelector(".children");
+            const isOpen = childrenDiv.classList.toggle("open");
+            toggleSpan.textContent = isOpen ? "▼" : "▶";
+          } else {
+            seleccionarYAbrirNodo(row, nodo);
+          }
+        } else {
+          seleccionarYAbrirNodo(row, nodo);
         }
       };
 
@@ -652,8 +795,14 @@
       return div;
     }
 
+    function seleccionarYAbrirNodo(row, nodo) {
+      document.querySelectorAll(".node-row.selected").forEach(el => el.classList.remove("selected"));
+      row.classList.add("selected");
+      mostrarDetalle(nodo);
+    }
+
     // ==========================================
-    // 4. FICHA DE LEVANTAMIENTO EN CAMPO Y FOTOS
+    // 4. FICHA DE LEVANTAMIENTO (HASTA 10 FOTOS)
     // ==========================================
     function mostrarDetalle(nodo) {
       nodoSeleccionado = nodo;
@@ -685,7 +834,7 @@
 
       let specsHTML = "";
       Object.entries(r).forEach(([clave, valor]) => {
-        if (valor && String(valor).trim() !== "") {
+        if (!clave.startsWith("_") && valor && String(valor).trim() !== "") {
           specsHTML += `
             <div class="spec-card">
               <div class="spec-label">${clave}</div>
@@ -706,7 +855,7 @@
         </div>
 
         <div class="field-capture-box">
-          <h3><span>Registro en Campo</span> <span>Fotos: ${(reg.fotos || []).length} / 5</span></h3>
+          <h3><span>Registro en Campo</span> <span>Fotos: ${(reg.fotos || []).length} / ${MAX_FOTOS}</span></h3>
           
           <div class="action-buttons">
             <button class="btn-check ${esLevantado ? "active-ok" : ""}" onclick="cambiarEstado('LEVANTADO')">✅ Levantado</button>
@@ -718,17 +867,18 @@
           <div class="photo-controls">
             <label class="photo-btn">
               📷 Tomar Foto
-              <input type="file" accept="image/*" capture="environment" style="display:none" onchange="procesarFotos(event)" ${(reg.fotos || []).length >= 5 ? "disabled" : ""} />
+              <input type="file" accept="image/*" capture="environment" style="display:none" onchange="procesarFotos(event)" ${(reg.fotos || []).length >= MAX_FOTOS ? "disabled" : ""} />
             </label>
             <label class="photo-btn">
               🖼️ Galería
-              <input type="file" accept="image/*" multiple style="display:none" onchange="procesarFotos(event)" ${(reg.fotos || []).length >= 5 ? "disabled" : ""} />
+              <input type="file" accept="image/*" multiple style="display:none" onchange="procesarFotos(event)" ${(reg.fotos || []).length >= MAX_FOTOS ? "disabled" : ""} />
             </label>
           </div>
 
           <div class="photo-grid">${fotosHTML}</div>
 
-          <textarea class="obs-input" placeholder="Observaciones técnicas, datos de placa, estado físico..." onchange="guardarObservacion(this.value)">${reg.observaciones || ""}</textarea>
+          <label class="form-label">Observaciones / Datos de placa (se exporta directo en el Excel):</label>
+          <textarea class="obs-input" placeholder="Escribe aquí observaciones técnicas, serie, marca, modelo o novedades..." oninput="guardarObservacion(this.value)">${reg.observaciones || ""}</textarea>
         </div>
 
         <div class="grid-specs">${specsHTML}</div>
@@ -744,7 +894,6 @@
       const id = nodoSeleccionado.id;
       const actual = registrosCampo[id] || { id, observaciones: "", fotos: [] };
 
-      // Si vuelve a pulsar el mismo estado, lo regresa a PENDIENTE
       if (actual.estado === nuevoEstado) {
         actual.estado = "PENDIENTE";
         actual.fecha = null;
@@ -771,7 +920,6 @@
       await guardarEnStore("levantamiento", actual);
     }
 
-    // Compresión y estampado automático de foto
     async function procesarFotos(event) {
       if (!nodoSeleccionado) return;
       const files = Array.from(event.target.files);
@@ -782,12 +930,11 @@
       if (!actual.fotos) actual.fotos = [];
 
       for (const file of files) {
-        if (actual.fotos.length >= 5) break;
+        if (actual.fotos.length >= MAX_FOTOS) break;
         const dataUrl = await comprimirYEstamparImagen(file, id);
         actual.fotos.push(dataUrl);
       }
 
-      // Si estaba pendiente y le toma foto, marcar automáticamente como LEVANTADO
       if (actual.estado === "PENDIENTE") {
         actual.estado = "LEVANTADO";
         const ahora = new Date();
@@ -802,7 +949,7 @@
       mostrarDetalle(nodoSeleccionado);
     }
 
-    function comprimirYEstamparImagen(file, codigoSAP) {
+    function comprimirYEstamparImagen(file, etiqueta) {
       return new Promise((resolve) => {
         const reader = new FileReader();
         reader.onload = (e) => {
@@ -823,10 +970,9 @@
             const ctx = canvas.getContext("2d");
             ctx.drawImage(img, 0, 0, width, height);
 
-            // Estampa técnica en esquina inferior
             const ahora = new Date();
-            const sello = `${codigoSAP} | ${ahora.toLocaleDateString("es-CO")} ${ahora.toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" })}`;
-            ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
+            const sello = `${etiqueta} | ${ahora.toLocaleDateString("es-CO")} ${ahora.toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" })}`;
+            ctx.fillStyle = "rgba(0, 0, 0, 0.65)";
             ctx.fillRect(0, height - 32, width, 32);
             ctx.fillStyle = "#38bdf8";
             ctx.font = "bold 15px monospace";
@@ -855,6 +1001,173 @@
       w.document.write(`<img src="${src}" style="max-width:100%; background:#000;" />`);
     }
 
+    // ==========================================
+    // 5. MÓDULO DE CREACIONES (EQUIPOS NUEVOS NO EN SAP)
+    // ==========================================
+    function actualizarBotonCreaciones() {
+      const total = Object.keys(creacionesNuevas).length;
+      document.getElementById("btnCreaciones").textContent = `➕ Creaciones (${total})`;
+    }
+
+    function abrirPanelCreaciones(idEditar = null) {
+      nodoSeleccionado = null;
+      const detailContainer = document.getElementById("detail-container");
+      const content = document.getElementById("detail-content");
+      detailContainer.classList.add("mobile-open");
+
+      const estActual = document.getElementById("filterEstacion").value;
+      const utEstacion = rawUT.filter(u => estActual === "TODAS" || u._estacionNorm === estActual);
+
+      const opcionesUT = utEstacion.map(u => 
+        `<option value="${u["Ubicación técnica"]}">${u["Ubicación técnica"]} - ${u["Denominación de la ubicación técnica"] || ""}</option>`
+      ).join("");
+
+      const item = idEditar ? creacionesNuevas[idEditar] : null;
+      const fotos = item?.fotos || [];
+
+      const fotosHTML = fotos.map((src, idx) => `
+        <div class="photo-thumb">
+          <img src="${src}" onclick="verFotoGrande('${src}')" />
+          ${idEditar ? `<button class="photo-del" onclick="eliminarFotoCreacion('${idEditar}', ${idx})">✕</button>` : ""}
+        </div>
+      `).join("");
+
+      const listaExistentesHTML = Object.values(creacionesNuevas).map(cr => `
+        <div class="creation-card" onclick="abrirPanelCreaciones('${cr.id}')">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+            <span class="badge badge-new">CREACIÓN NUEVA</span>
+            <span style="font-size:0.75rem; color:var(--muted);">${cr.estacion} · 📷 ${(cr.fotos || []).length}</span>
+          </div>
+          <div style="font-weight:700; font-size:0.95rem;">${cr.tag ? `[${cr.tag}] ` : ""}${cr.denominacion}</div>
+          <div style="font-size:0.78rem; color:var(--accent); font-family:monospace; margin-top:2px;">UT: ${cr.ut || "Sin UT"}</div>
+        </div>
+      `).join("");
+
+      content.innerHTML = `
+        <div class="detail-header">
+          <span class="badge badge-new">Alta de Equipo Físico (No existe en SAP)</span>
+          <h2 class="detail-title">${item ? "Editar Creación" : "Nueva Creación en Campo"}</h2>
+          <p style="font-size:0.8rem; color:var(--muted);">Registra equipos encontrados en planta que deben crearse en SAP.</p>
+        </div>
+
+        <div class="field-capture-box">
+          <label class="form-label">Ubicación Técnica Padre (Donde está instalado):</label>
+          <input list="listaUTCreacion" id="cr_ut" class="form-input" value="${item?.ut || ""}" placeholder="Escribe o selecciona la UT..." />
+          <datalist id="listaUTCreacion">${opcionesUT}</datalist>
+
+          <label class="form-label">TAG Físico / Placa (Opcional):</label>
+          <input type="text" id="cr_tag" class="form-input" value="${item?.tag || ""}" placeholder="Ej: PIT-104B, BOM-02..." />
+
+          <label class="form-label">Denominación / Nombre del Equipo *:</label>
+          <input type="text" id="cr_denom" class="form-input" value="${item?.denominacion || ""}" placeholder="Ej: Transmisor de presión salida bomba..." />
+
+          <label class="form-label">Observaciones / Datos de Placa (Marca, Modelo, Serie, Capacidad):</label>
+          <textarea id="cr_obs" class="obs-input" placeholder="Detalla fabricante, modelo, número de serie y características técnicas para su creación en SAP...">${item?.observaciones || ""}</textarea>
+
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <span class="form-label" style="margin:0;">Evidencia Fotográfica (${fotos.length} / ${MAX_FOTOS}):</span>
+          </div>
+
+          <div class="photo-controls">
+            <label class="photo-btn">
+              📷 Tomar Foto
+              <input type="file" accept="image/*" capture="environment" style="display:none" onchange="procesarFotoCreacion(event, '${idEditar || ""}')" ${fotos.length >= MAX_FOTOS ? "disabled" : ""} />
+            </label>
+            <label class="photo-btn">
+              🖼️ Galería
+              <input type="file" accept="image/*" multiple style="display:none" onchange="procesarFotoCreacion(event, '${idEditar || ""}')" ${fotos.length >= MAX_FOTOS ? "disabled" : ""} />
+            </label>
+          </div>
+
+          <div class="photo-grid" id="cr_photo_grid">${fotosHTML}</div>
+
+          <div style="display:flex; gap:8px; margin-top:10px;">
+            <button class="export-btn" style="flex:1; padding:11px;" onclick="guardarCreacion('${idEditar || ""}')">💾 Guardar Equipo Nuevo</button>
+            ${idEditar ? `<button style="background:#ef4444; color:white; border:none; padding:11px;" onclick="borrarCreacion('${idEditar}')">🗑️ Eliminar</button>` : ""}
+          </div>
+        </div>
+
+        <h3 style="font-size:0.9rem; color:var(--muted); margin:18px 0 10px;">Equipos registrados para creación (${Object.keys(creacionesNuevas).length})</h3>
+        ${listaExistentesHTML || '<div style="font-size:0.82rem; color:var(--muted);">Aún no has registrado equipos nuevos.</div>'}
+      `;
+    }
+
+    let fotosTemporalesCreacion = [];
+
+    async function procesarFotoCreacion(event, idEditar) {
+      const files = Array.from(event.target.files);
+      if (!files.length) return;
+
+      const tag = document.getElementById("cr_tag").value.trim() || "CREACION_SAP";
+      let listaFotos = idEditar && creacionesNuevas[idEditar] ? [...creacionesNuevas[idEditar].fotos] : [...fotosTemporalesCreacion];
+
+      for (const file of files) {
+        if (listaFotos.length >= MAX_FOTOS) break;
+        const dataUrl = await comprimirYEstamparImagen(file, tag);
+        listaFotos.push(dataUrl);
+      }
+
+      if (idEditar && creacionesNuevas[idEditar]) {
+        creacionesNuevas[idEditar].fotos = listaFotos;
+        await guardarEnStore("creaciones", creacionesNuevas[idEditar]);
+        abrirPanelCreaciones(idEditar);
+      } else {
+        fotosTemporalesCreacion = listaFotos;
+        const grid = document.getElementById("cr_photo_grid");
+        grid.innerHTML = listaFotos.map(src => `<div class="photo-thumb"><img src="${src}" /></div>`).join("");
+      }
+    }
+
+    async function guardarCreacion(idEditar) {
+      const denom = document.getElementById("cr_denom").value.trim();
+      if (!denom) {
+        alert("Por favor ingresa al menos la denominación o nombre del equipo.");
+        return;
+      }
+
+      const ut = document.getElementById("cr_ut").value.trim();
+      const tag = document.getElementById("cr_tag").value.trim();
+      const obs = document.getElementById("cr_obs").value.trim();
+      const est = document.getElementById("filterEstacion").value;
+      const ahora = new Date();
+
+      const id = idEditar || `CREA-${Date.now()}`;
+      const existente = idEditar ? creacionesNuevas[idEditar] : null;
+
+      const registro = {
+        id,
+        estacion: existente?.estacion || (est === "TODAS" ? "General" : est),
+        ut,
+        tag,
+        denominacion: denom,
+        observaciones: obs,
+        fecha: existente?.fecha || (ahora.toLocaleDateString("es-CO") + " " + ahora.toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" })),
+        inspector: document.getElementById("inspectorName").value.trim() || "Rodrigo",
+        fotos: existente ? existente.fotos : [...fotosTemporalesCreacion]
+      };
+
+      creacionesNuevas[id] = registro;
+      fotosTemporalesCreacion = [];
+      await guardarEnStore("creaciones", registro);
+      actualizarBotonCreaciones();
+      abrirPanelCreaciones();
+    }
+
+    async function eliminarFotoCreacion(id, index) {
+      if (!confirm("¿Eliminar esta foto?")) return;
+      creacionesNuevas[id].fotos.splice(index, 1);
+      await guardarEnStore("creaciones", creacionesNuevas[id]);
+      abrirPanelCreaciones(id);
+    }
+
+    async function borrarCreacion(id) {
+      if (!confirm("¿Eliminar por completo este registro de creación?")) return;
+      delete creacionesNuevas[id];
+      await eliminarDeStore("creaciones", id);
+      actualizarBotonCreaciones();
+      abrirPanelCreaciones();
+    }
+
     function expandirTodo(abrir) {
       document.querySelectorAll(".children").forEach(el => abrir ? el.classList.add("open") : el.classList.remove("open"));
       document.querySelectorAll(".node-row").forEach(row => {
@@ -864,7 +1177,7 @@
     }
 
     // ==========================================
-    // 5. EXPORTACIÓN A ZIP (EXCEL + CARPETAS SAP)
+    // 6. EXPORTACIÓN A ZIP (EXCEL CON OBSERVACIONES + CARPETAS SAP)
     // ==========================================
     function limpiarNombreCarpeta(str) {
       return String(str || "SIN_NOMBRE").replace(/[\\/:*?"<>|]/g, "_").trim();
@@ -876,14 +1189,18 @@
         return;
       }
 
+      const estSeleccionada = document.getElementById("filterEstacion").value;
+      const equiposExportar = estSeleccionada === "TODAS" ? rawEQ : rawEQ.filter(e => e._estacionNorm === estSeleccionada);
+
       const zip = new JSZip();
       const fechaHoy = new Date().toISOString().slice(0, 10);
+      const etiquetaEst = estSeleccionada === "TODAS" ? "Todas_Estaciones" : limpiarNombreCarpeta(estSeleccionada);
       const carpetaFotosRoot = zip.folder("Evidencia_Fotografica");
 
       const filasExcel = [];
 
-      // Recorrer equipos y construir Excel + carpetas jerárquicas
-      rawEQ.forEach(eq => {
+      // 1. Equipos existentes en SAP
+      equiposExportar.forEach(eq => {
         const id = eq["Equipo"];
         const denom = eq["Denominación de objeto técnico"] || "Sin_Denominacion";
         const ut = eq["Ubicación técnica"] || "SIN_UBICACION_TECNICA";
@@ -893,6 +1210,7 @@
         const numFotos = (reg.fotos || []).length;
 
         filasExcel.push({
+          "Estación": eq._estacionNorm || "",
           "Ubicación Técnica": ut,
           "Equipo SAP": id,
           "Denominación": denom,
@@ -906,8 +1224,8 @@
           "Observaciones": reg.observaciones || ""
         });
 
-        // Si tiene fotos u observaciones, crear su carpeta dentro de la UT respetando el árbol SAP
-        if (numFotos > 0 || (reg.observaciones && reg.observaciones.trim() !== "")) {
+        // Solo guardar carpeta si tiene fotos (observaciones van directo al Excel)
+        if (numFotos > 0) {
           const nombreCarpetaUT = limpiarNombreCarpeta(ut);
           const nombreCarpetaEQ = limpiarNombreCarpeta(`${id} - ${denom}`).substring(0, 80);
           const folderEQ = carpetaFotosRoot.folder(nombreCarpetaUT).folder(nombreCarpetaEQ);
@@ -916,26 +1234,62 @@
             const base64Data = dataUrl.split(",")[1];
             folderEQ.file(`${limpiarNombreCarpeta(id)}_Foto_${i + 1}.jpg`, base64Data, { base64: true });
           });
-
-          if (reg.observaciones) {
-            folderEQ.file("observaciones.txt", `Equipo: ${id} - ${denom}\nUT: ${ut}\nEstado: ${estado}\nFecha: ${reg.fecha || ""}\nInspector: ${reg.inspector || ""}\n\nObservaciones:\n${reg.observaciones}`);
-          }
         }
       });
 
-      // Generar libro Excel
-      const ws = XLSX.utils.json_to_sheet(filasExcel);
+      // 2. Equipos nuevos (Creaciones)
+      const listaCreaciones = Object.values(creacionesNuevas).filter(cr => estSeleccionada === "TODAS" || cr.estacion === estSeleccionada);
+      const filasCreaciones = [];
+
+      if (listaCreaciones.length > 0) {
+        const carpetaCreaciones = carpetaFotosRoot.folder("_CREACIONES_NUEVAS");
+
+        listaCreaciones.forEach((cr, idx) => {
+          const numFotos = (cr.fotos || []).length;
+          filasCreaciones.push({
+            "ID Temporal": cr.id,
+            "Estación": cr.estacion,
+            "Ubicación Técnica Padre": cr.ut || "SIN_UT",
+            "TAG Físico": cr.tag || "",
+            "Denominación Equipo": cr.denominacion,
+            "Fecha y Hora": cr.fecha,
+            "Inspector": cr.inspector,
+            "Cantidad Fotos": numFotos,
+            "Observaciones / Datos de Placa": cr.observaciones || ""
+          });
+
+          if (numFotos > 0) {
+            const folderUT = carpetaCreaciones.folder(limpiarNombreCarpeta(cr.ut || "SIN_UT"));
+            const nombreCarpetaNuevo = limpiarNombreCarpeta(`${cr.tag || `NUEVO_${idx + 1}`} - ${cr.denominacion}`).substring(0, 80);
+            const folderNuevo = folderUT.folder(nombreCarpetaNuevo);
+
+            cr.fotos.forEach((dataUrl, i) => {
+              const base64Data = dataUrl.split(",")[1];
+              folderNuevo.file(`${limpiarNombreCarpeta(cr.tag || `NUEVO_${idx + 1}`)}_Foto_${i + 1}.jpg`, base64Data, { base64: true });
+            });
+          }
+        });
+      }
+
+      // Generar libro Excel con ambas pestañas
       const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.json_to_sheet(filasExcel);
       XLSX.utils.book_append_sheet(wb, ws, "Levantamiento_SAP");
+
+      if (filasCreaciones.length > 0) {
+        const wsCreaciones = XLSX.utils.json_to_sheet(filasCreaciones);
+        XLSX.utils.book_append_sheet(wb, wsCreaciones, "Creaciones_Nuevas");
+      }
+
       const excelBuffer = XLSX.write(wb, { bookType: "xlsx", type: "array" });
 
-      zip.file(`Reporte_Levantamiento_${fechaHoy}.xlsx`, excelBuffer);
-      zip.file(`Respaldo_Datos_${fechaHoy}.json`, JSON.stringify(registrosCampo, null, 2));
+      zip.file(`Reporte_${etiquetaEst}_${fechaHoy}.xlsx`, excelBuffer);
+      zip.file(`Respaldo_Datos_${etiquetaEst}_${fechaHoy}.json`, JSON.stringify({ registrosCampo, creacionesNuevas }, null, 2));
 
       const blob = await zip.generateAsync({ type: "blob" });
       const link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
-      link.download = `Levantamiento_SAP_${fechaHoy}.zip`;
+      link.download = `Levantamiento_${etiquetaEst}_${fechaHoy}.zip`;
       link.click();
     }
 
@@ -945,11 +1299,11 @@
       clearTimeout(searchTimer);
       searchTimer = setTimeout(renderizarArbol, 200);
     });
+    document.getElementById("filterEstacion").addEventListener("change", aplicarCambioEstacion);
     document.getElementById("filterEstado").addEventListener("change", renderizarArbol);
     document.getElementById("filterTroncal").addEventListener("change", renderizarArbol);
     document.getElementById("filterCriticidad").addEventListener("change", renderizarArbol);
 
-    // Iniciar app
     cargarDatos(false);
   </script>
 </body>
