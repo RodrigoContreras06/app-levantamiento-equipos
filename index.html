@@ -105,6 +105,7 @@
       font-size: 0.8rem;
       cursor: pointer;
     }
+    select.ut-select { max-width: 240px; }
     input[type="text"].inspector-input { width: 105px; cursor: text; }
     button:hover { background: var(--panel-hover); }
     button.primary { background: var(--accent); color: #0f172a; font-weight: 600; border: none; }
@@ -317,6 +318,7 @@
       #detail-container.mobile-open { display: block; }
       .mobile-back-btn { display: block; }
       .grid-specs { grid-template-columns: 1fr; }
+      select.ut-select { max-width: 100%; width: 100%; }
     }
   </style>
 </head>
@@ -345,12 +347,19 @@
     </div>
 
     <div class="controls-bar">
-      <input type="text" id="searchInput" class="search-box" placeholder="Buscar TAG, Equipo SAP, UT o descripción..." />
+      <input type="text" id="searchInput" class="search-box" placeholder="Buscar TAG, Equipo SAP, UT o palabra clave..." />
+      <select id="filterUT" class="ut-select"><option value="">Todas las UTs</option></select>
       <select id="filterEstado">
         <option value="">Todos los estados</option>
         <option value="PENDIENTE">⏳ Pendientes</option>
         <option value="LEVANTADO">✅ Levantados</option>
         <option value="NO_ENCONTRADO">❌ No encontrados</option>
+      </select>
+      <select id="filterEvidencia">
+        <option value="">Toda evidencia</option>
+        <option value="CON_FOTOS">📷 Con fotos</option>
+        <option value="SIN_FOTOS_LEV">⚠️ Levantado sin fotos</option>
+        <option value="CON_OBS">📝 Con observaciones</option>
       </select>
       <select id="filterTroncal"><option value="">Todas las Troncales</option></select>
       <select id="filterCriticidad"><option value="">Toda Criticidad</option></select>
@@ -595,11 +604,39 @@
       const utFiltradas = estSeleccionada === "TODAS" ? rawUT : rawUT.filter(u => u._estacionNorm === estSeleccionada);
       const eqFiltrados = estSeleccionada === "TODAS" ? rawEQ : rawEQ.filter(e => e._estacionNorm === estSeleccionada);
 
+      poblarFiltroUT(utFiltradas, eqFiltrados);
       poblarFiltrosSecundarios(utFiltradas, eqFiltrados);
       treeData = construirArbol(utFiltradas, eqFiltrados);
       actualizarProgreso(eqFiltrados);
       actualizarBotonCreaciones();
       renderizarArbol();
+    }
+
+    function poblarFiltroUT(utList, eqList) {
+      const selUT = document.getElementById("filterUT");
+      const opcionesMap = new Map();
+
+      utList.forEach(u => {
+        const id = String(u["Ubicación técnica"] || "").trim();
+        if (id) {
+          const nom = u["Denominación de la ubicación técnica"] || "";
+          opcionesMap.set(id, nom ? `${id} - ${nom}` : id);
+        }
+      });
+
+      eqList.forEach(e => {
+        const id = String(e["Ubicación técnica"] || "").trim();
+        if (id && !opcionesMap.has(id)) {
+          opcionesMap.set(id, id);
+        }
+      });
+
+      selUT.innerHTML = '<option value="">Todas las UTs</option>';
+      [...opcionesMap.entries()]
+        .sort((a, b) => a[0].localeCompare(b[0]))
+        .forEach(([id, label]) => {
+          selUT.innerHTML += `<option value="${id}">${label}</option>`;
+        });
     }
 
     function actualizarProgreso(eqList = null) {
@@ -697,9 +734,20 @@
       const troncal = document.getElementById("filterTroncal").value;
       const crit = document.getElementById("filterCriticidad").value;
       const estadoFiltro = document.getElementById("filterEstado").value;
+      const utFiltro = document.getElementById("filterUT").value;
+      const evFiltro = document.getElementById("filterEvidencia").value;
 
-      const hayFiltro = query.length > 0 || troncal !== "" || crit !== "" || estadoFiltro !== "";
-      const arbolFiltrado = hayFiltro ? filtrarNodos(treeData, query, troncal, crit, estadoFiltro) : treeData;
+      const hayFiltro =
+        query.length > 0 ||
+        troncal !== "" ||
+        crit !== "" ||
+        estadoFiltro !== "" ||
+        utFiltro !== "" ||
+        evFiltro !== "";
+
+      const arbolFiltrado = hayFiltro
+        ? filtrarNodos(treeData, query, troncal, crit, estadoFiltro, utFiltro, evFiltro)
+        : treeData;
 
       const container = document.getElementById("tree-container");
       container.innerHTML = "";
@@ -714,22 +762,39 @@
       container.appendChild(fragment);
     }
 
-    function filtrarNodos(nodos, query, troncal, crit, estadoFiltro, ancestroCoincidio = false) {
+    function filtrarNodos(nodos, query, troncal, crit, estadoFiltro, utFiltro, evFiltro, ancestroCoincidio = false) {
       return nodos.map(nodo => {
         const reg = registrosCampo[nodo.id];
         const estadoActual = reg?.estado || "PENDIENTE";
+        const numFotos = (reg?.fotos || []).length;
+        const tieneObs = Boolean(reg?.observaciones && reg.observaciones.trim() !== "");
 
         const matchQuery = !query || nodo._searchText.includes(query);
         const matchTroncal = !troncal || nodo.raw["Troncal"] === troncal;
         const matchCrit = !crit || nodo.raw["Criticidad"] === crit;
         const matchEstado = !estadoFiltro || (nodo.tipo !== "UT" && estadoActual === estadoFiltro);
 
-        const esteNodoCoincide = matchQuery && matchTroncal && matchCrit && matchEstado;
-        const mostrarHijosCompletos = ancestroCoincidio || (Boolean(query) && !estadoFiltro && esteNodoCoincide);
+        const utNodo = String(nodo.raw?.["Ubicación técnica"] || nodo.id || "");
+        const utSupNodo = String(nodo.raw?.["Ubicación técnica superior"] || "");
+        const matchUT =
+          !utFiltro ||
+          nodo.id === utFiltro ||
+          utNodo === utFiltro ||
+          utNodo.startsWith(utFiltro) ||
+          utSupNodo === utFiltro ||
+          utSupNodo.startsWith(utFiltro);
+
+        let matchEvidencia = true;
+        if (evFiltro === "CON_FOTOS") matchEvidencia = numFotos > 0;
+        else if (evFiltro === "SIN_FOTOS_LEV") matchEvidencia = nodo.tipo !== "UT" && estadoActual === "LEVANTADO" && numFotos === 0;
+        else if (evFiltro === "CON_OBS") matchEvidencia = tieneObs;
+
+        const esteNodoCoincide = matchQuery && matchTroncal && matchCrit && matchEstado && matchUT && matchEvidencia;
+        const mostrarHijosCompletos = ancestroCoincidio || ((Boolean(query) || Boolean(utFiltro)) && !estadoFiltro && !evFiltro && esteNodoCoincide);
 
         const hijosFiltrados = mostrarHijosCompletos
-          ? filtrarNodos(nodo.children, "", troncal, crit, estadoFiltro, true)
-          : filtrarNodos(nodo.children, query, troncal, crit, estadoFiltro, false);
+          ? filtrarNodos(nodo.children, "", troncal, crit, estadoFiltro, "", evFiltro, true)
+          : filtrarNodos(nodo.children, query, troncal, crit, estadoFiltro, utFiltro, evFiltro, false);
 
         if (esteNodoCoincide || hijosFiltrados.length > 0) {
           return {
@@ -1218,163 +1283,168 @@
     }
 
     // ==========================================
-    // 6. EXPORTACIÓN A ZIP (EXCEL CON OBSERVACIONES + CARPETAS SAP)
+    // 6. EXPORTACIÓN A ZIP (EXCEL + SUBCARPETAS SAP)
     // ==========================================
-    function limpiarNombreCarpeta(str) {
-      return String(str || "SIN_NOMBRE").replace(/[\\/:*?"<>|]/g, "_").trim();
+    function limpiarNombreCarpeta(str, maxLen = 45) {
+      return String(str || "SIN_NOMBRE")
+        .replace(/[\\/:*?"<>|]/g, "_")
+        .replace(/\s+/g, " ")
+        .trim()
+        .substring(0, maxLen)
+        .trim();
     }
 
-function construirRutaCarpetasUT(utId, mapUTRaw) {
-  const ruta = [];
-  const visitados = new Set();
-  let actualId = String(utId || "").trim();
+    function construirRutaCarpetasUT(utId, mapUTRaw) {
+      const ruta = [];
+      const visitados = new Set();
+      let actualId = String(utId || "").trim();
 
-  while (actualId && !visitados.has(actualId)) {
-    visitados.add(actualId);
-    ruta.unshift(limpiarNombreCarpeta(actualId));
-    const utObj = mapUTRaw[actualId];
-    actualId = utObj ? String(utObj["Ubicación técnica superior"] || "").trim() : "";
-  }
+      while (actualId && !visitados.has(actualId)) {
+        visitados.add(actualId);
+        ruta.unshift(limpiarNombreCarpeta(actualId, 45));
+        const utObj = mapUTRaw[actualId];
+        actualId = utObj ? String(utObj["Ubicación técnica superior"] || "").trim() : "";
+      }
 
-  return ruta.length > 0 ? ruta : ["SIN_UBICACION_TECNICA"];
-}
-
-async function exportarJornadaZIP() {
-  if (typeof JSZip === "undefined" || typeof XLSX === "undefined") {
-    alert("Las librerías de exportación aún no están cargadas. Conéctate a internet una vez y recarga la página.");
-    return;
-  }
-
-  const mapUTRaw = {};
-  rawUT.forEach(u => {
-    const id = String(u["Ubicación técnica"] || "").trim();
-    if (id) mapUTRaw[id] = u;
-  });
-
-  const estSeleccionada = document.getElementById("filterEstacion").value;
-  const equiposExportar = estSeleccionada === "TODAS"
-    ? rawEQ
-    : rawEQ.filter(e => e._estacionNorm === estSeleccionada);
-
-  const zip = new JSZip();
-  const fechaHoy = new Date().toISOString().slice(0, 10);
-  const etiquetaEst = estSeleccionada === "TODAS"
-    ? "Todas_Estaciones"
-    : limpiarNombreCarpeta(estSeleccionada);
-  const carpetaFotosRoot = zip.folder("Evidencia_Fotografica");
-
-  const filasExcel = [];
-
-  equiposExportar.forEach(eq => {
-    const id = String(eq["Equipo"] || "").trim();
-    if (!id) return;
-
-    const denom = eq["Denominación de objeto técnico"] || "Sin_Denominacion";
-    const ut = String(eq["Ubicación técnica"] || "").trim() || "SIN_UBICACION_TECNICA";
-    const estacionEQ = eq._estacionNorm || "General / Sin Estación";
-    const reg = registrosCampo[id] || {};
-
-    const estado = reg.estado || "PENDIENTE";
-    const numFotos = (reg.fotos || []).length;
-
-    filasExcel.push({
-      "Estación": estacionEQ,
-      "Ubicación Técnica": ut,
-      "Equipo SAP": id,
-      "Denominación": denom,
-      "Equipo Superior": eq["Equipo superior"] || "",
-      "Troncal": eq["Troncal"] || "",
-      "Criticidad": eq["Criticidad"] || "",
-      "Estado Levantamiento": estado,
-      "Fecha y Hora": reg.fecha || "",
-      "Inspector": reg.inspector || "",
-      "Cantidad Fotos": numFotos,
-      "Observaciones": reg.observaciones || ""
-    });
-
-    if (numFotos > 0) {
-      let carpetaActual = carpetaFotosRoot.folder(limpiarNombreCarpeta(estacionEQ));
-      const nivelesUT = construirRutaCarpetasUT(ut, mapUTRaw);
-
-      nivelesUT.forEach(nivel => {
-        carpetaActual = carpetaActual.folder(nivel);
-      });
-
-      const nombreCarpetaEQ = limpiarNombreCarpeta(`${id} - ${denom}`).substring(0, 80);
-      const folderEQ = carpetaActual.folder(nombreCarpetaEQ);
-
-      (reg.fotos || []).forEach((dataUrl, i) => {
-        const base64Data = dataUrl.split(",")[1];
-        folderEQ.file(`${limpiarNombreCarpeta(id)}_Foto_${i + 1}.jpg`, base64Data, { base64: true });
-      });
+      return ruta.length > 0 ? ruta : ["SIN_UBICACION_TECNICA"];
     }
-  });
 
-  const listaCreaciones = Object.values(creacionesNuevas).filter(cr =>
-    estSeleccionada === "TODAS" || cr.estacion === estSeleccionada
-  );
-  const filasCreaciones = [];
+    async function exportarJornadaZIP() {
+      if (typeof JSZip === "undefined" || typeof XLSX === "undefined") {
+        alert("Las librerías de exportación aún no están cargadas. Conéctate a internet una vez y recarga la página.");
+        return;
+      }
 
-  if (listaCreaciones.length > 0) {
-    const carpetaCreaciones = carpetaFotosRoot.folder("_CREACIONES_NUEVAS");
-
-    listaCreaciones.forEach((cr, idx) => {
-      const numFotos = (cr.fotos || []).length;
-      const estacionCr = cr.estacion || "General / Sin Estación";
-      const utCr = String(cr.ut || "").trim() || "SIN_UT";
-
-      filasCreaciones.push({
-        "ID Temporal": cr.id,
-        "Estación": estacionCr,
-        "Ubicación Técnica Padre": utCr,
-        "TAG Físico": cr.tag || "",
-        "Denominación Equipo": cr.denominacion,
-        "Fecha y Hora": cr.fecha,
-        "Inspector": cr.inspector,
-        "Cantidad Fotos": numFotos,
-        "Observaciones / Datos de Placa": cr.observaciones || ""
+      const mapUTRaw = {};
+      rawUT.forEach(u => {
+        const id = String(u["Ubicación técnica"] || "").trim();
+        if (id) mapUTRaw[id] = u;
       });
 
-      if (numFotos > 0) {
-        let carpetaCrActual = carpetaCreaciones.folder(limpiarNombreCarpeta(estacionCr));
-        const nivelesUTCr = construirRutaCarpetasUT(utCr, mapUTRaw);
+      const estSeleccionada = document.getElementById("filterEstacion").value;
+      const equiposExportar = estSeleccionada === "TODAS"
+        ? rawEQ
+        : rawEQ.filter(e => e._estacionNorm === estSeleccionada);
 
-        nivelesUTCr.forEach(nivel => {
-          carpetaCrActual = carpetaCrActual.folder(nivel);
+      const zip = new JSZip();
+      const fechaHoy = new Date().toISOString().slice(0, 10);
+      const etiquetaEst = estSeleccionada === "TODAS"
+        ? "Todas_Estaciones"
+        : limpiarNombreCarpeta(estSeleccionada, 35);
+      const carpetaFotosRoot = zip.folder("Evidencia_Fotografica");
+
+      const filasExcel = [];
+
+      equiposExportar.forEach(eq => {
+        const id = String(eq["Equipo"] || "").trim();
+        if (!id) return;
+
+        const denom = eq["Denominación de objeto técnico"] || "Sin_Denominacion";
+        const ut = String(eq["Ubicación técnica"] || "").trim() || "SIN_UBICACION_TECNICA";
+        const estacionEQ = eq._estacionNorm || "General / Sin Estación";
+        const reg = registrosCampo[id] || {};
+
+        const estado = reg.estado || "PENDIENTE";
+        const numFotos = (reg.fotos || []).length;
+
+        filasExcel.push({
+          "Estación": estacionEQ,
+          "Ubicación Técnica": ut,
+          "Equipo SAP": id,
+          "Denominación": denom,
+          "Equipo Superior": eq["Equipo superior"] || "",
+          "Troncal": eq["Troncal"] || "",
+          "Criticidad": eq["Criticidad"] || "",
+          "Estado Levantamiento": estado,
+          "Fecha y Hora": reg.fecha || "",
+          "Inspector": reg.inspector || "",
+          "Cantidad Fotos": numFotos,
+          "Observaciones": reg.observaciones || ""
         });
 
-        const baseTag = cr.tag || `NUEVO_${idx + 1}`;
-        const nombreCarpetaNuevo = limpiarNombreCarpeta(`${baseTag} - ${cr.denominacion}`).substring(0, 80);
-        const folderNuevo = carpetaCrActual.folder(nombreCarpetaNuevo);
+        if (numFotos > 0) {
+          let carpetaActual = carpetaFotosRoot.folder(limpiarNombreCarpeta(estacionEQ, 35));
+          const nivelesUT = construirRutaCarpetasUT(ut, mapUTRaw);
 
-        cr.fotos.forEach((dataUrl, i) => {
-          const base64Data = dataUrl.split(",")[1];
-          folderNuevo.file(`${limpiarNombreCarpeta(baseTag)}_Foto_${i + 1}.jpg`, base64Data, { base64: true });
+          nivelesUT.forEach(nivel => {
+            carpetaActual = carpetaActual.folder(nivel);
+          });
+
+          const nombreCarpetaEQ = limpiarNombreCarpeta(`${id} - ${denom}`, 35);
+          const folderEQ = carpetaActual.folder(nombreCarpetaEQ);
+
+          (reg.fotos || []).forEach((dataUrl, i) => {
+            const base64Data = dataUrl.split(",")[1];
+            folderEQ.file(`${limpiarNombreCarpeta(id, 20)}_F${i + 1}.jpg`, base64Data, { base64: true });
+          });
+        }
+      });
+
+      const listaCreaciones = Object.values(creacionesNuevas).filter(cr =>
+        estSeleccionada === "TODAS" || cr.estacion === estSeleccionada
+      );
+      const filasCreaciones = [];
+
+      if (listaCreaciones.length > 0) {
+        const carpetaCreaciones = carpetaFotosRoot.folder("_CREACIONES_NUEVAS");
+
+        listaCreaciones.forEach((cr, idx) => {
+          const numFotos = (cr.fotos || []).length;
+          const estacionCr = cr.estacion || "General / Sin Estación";
+          const utCr = String(cr.ut || "").trim() || "SIN_UT";
+
+          filasCreaciones.push({
+            "ID Temporal": cr.id,
+            "Estación": estacionCr,
+            "Ubicación Técnica Padre": utCr,
+            "TAG Físico": cr.tag || "",
+            "Denominación Equipo": cr.denominacion,
+            "Fecha y Hora": cr.fecha,
+            "Inspector": cr.inspector,
+            "Cantidad Fotos": numFotos,
+            "Observaciones / Datos de Placa": cr.observaciones || ""
+          });
+
+          if (numFotos > 0) {
+            let carpetaCrActual = carpetaCreaciones.folder(limpiarNombreCarpeta(estacionCr, 35));
+            const nivelesUTCr = construirRutaCarpetasUT(utCr, mapUTRaw);
+
+            nivelesUTCr.forEach(nivel => {
+              carpetaCrActual = carpetaCrActual.folder(nivel);
+            });
+
+            const baseTag = cr.tag || `NUEVO_${idx + 1}`;
+            const nombreCarpetaNuevo = limpiarNombreCarpeta(`${baseTag} - ${cr.denominacion}`, 35);
+            const folderNuevo = carpetaCrActual.folder(nombreCarpetaNuevo);
+
+            cr.fotos.forEach((dataUrl, i) => {
+              const base64Data = dataUrl.split(",")[1];
+              folderNuevo.file(`${limpiarNombreCarpeta(baseTag, 20)}_F${i + 1}.jpg`, base64Data, { base64: true });
+            });
+          }
         });
       }
-    });
-  }
 
-  const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.json_to_sheet(filasExcel);
-  XLSX.utils.book_append_sheet(wb, ws, "Levantamiento_SAP");
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.json_to_sheet(filasExcel);
+      XLSX.utils.book_append_sheet(wb, ws, "Levantamiento_SAP");
 
-  if (filasCreaciones.length > 0) {
-    const wsCreaciones = XLSX.utils.json_to_sheet(filasCreaciones);
-    XLSX.utils.book_append_sheet(wb, wsCreaciones, "Creaciones_Nuevas");
-  }
+      if (filasCreaciones.length > 0) {
+        const wsCreaciones = XLSX.utils.json_to_sheet(filasCreaciones);
+        XLSX.utils.book_append_sheet(wb, wsCreaciones, "Creaciones_Nuevas");
+      }
 
-  const excelBuffer = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+      const excelBuffer = XLSX.write(wb, { bookType: "xlsx", type: "array" });
 
-  zip.file(`Reporte_${etiquetaEst}_${fechaHoy}.xlsx`, excelBuffer);
-  zip.file(`Respaldo_Datos_${etiquetaEst}_${fechaHoy}.json`, JSON.stringify({ registrosCampo, creacionesNuevas }, null, 2));
+      zip.file(`Reporte_${etiquetaEst}_${fechaHoy}.xlsx`, excelBuffer);
+      zip.file(`Respaldo_Datos_${etiquetaEst}_${fechaHoy}.json`, JSON.stringify({ registrosCampo, creacionesNuevas }, null, 2));
 
-  const blob = await zip.generateAsync({ type: "blob" });
-  const link = document.createElement("a");
-  link.href = URL.createObjectURL(blob);
-  link.download = `Levantamiento_${etiquetaEst}_${fechaHoy}.zip`;
-  link.click();
-}
+      const blob = await zip.generateAsync({ type: "blob" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = `Levantamiento_${etiquetaEst}_${fechaHoy}.zip`;
+      link.click();
+    }
 
     let searchTimer;
     document.getElementById("searchInput").addEventListener("input", () => {
@@ -1382,7 +1452,9 @@ async function exportarJornadaZIP() {
       searchTimer = setTimeout(renderizarArbol, 200);
     });
     document.getElementById("filterEstacion").addEventListener("change", aplicarCambioEstacion);
+    document.getElementById("filterUT").addEventListener("change", renderizarArbol);
     document.getElementById("filterEstado").addEventListener("change", renderizarArbol);
+    document.getElementById("filterEvidencia").addEventListener("change", renderizarArbol);
     document.getElementById("filterTroncal").addEventListener("change", renderizarArbol);
     document.getElementById("filterCriticidad").addEventListener("change", renderizarArbol);
 
